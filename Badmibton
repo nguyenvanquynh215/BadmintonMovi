@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Quỹ Cầu Lông Pro (2025-2099)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --green: #27ae60;
+            --red: #c0392b;
+            --bg: #f4f6f7;
+        }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 10px; background: var(--bg); font-size: 13px; }
+        
+        /* Layout */
+        .grid { display: flex; gap: 15px; height: 96vh; }
+        .col-left { width: 68%; display: flex; flex-direction: column; gap: 10px; }
+        .col-right { width: 32%; background: white; padding: 10px; border-left: 3px solid #ddd; display: flex; flex-direction: column; overflow-y: auto; }
+
+        /* Components */
+        .box { background: white; padding: 10px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #ddd; display: flex; flex-direction: column; }
+        .box-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 2px solid #eee; padding-bottom: 5px; }
+        h3, h4 { margin: 0; color: var(--primary); font-size: 16px; }
+        
+        /* Tables */
+        .table-wrap { overflow: auto; flex: 1; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #eee; padding: 5px; text-align: center; white-space: nowrap; }
+        th { background: var(--primary); color: white; position: sticky; top: 0; z-index: 10; font-size: 12px; }
+        td input { width: 100%; border: none; background: transparent; text-align: center; font-family: inherit; }
+        td input:focus { background: #f0f8ff; outline: 1px solid #ccc; }
+
+        /* Specific Column Styles */
+        .col-fit { width: 1%; white-space: nowrap; text-align: left; font-weight: bold; }
+        .money-cell { text-align: right; }
+        .debt-cell { color: var(--red); font-weight: bold; }
+        
+        /* Buttons */
+        button { cursor: pointer; padding: 5px 10px; border: none; border-radius: 4px; color: white; font-weight: bold; font-size: 12px; }
+        .btn-add { background: #3498db; }
+        .btn-save { background: var(--green); width: 100%; margin-top: 10px; padding: 10px; font-size: 14px; }
+        .btn-del { background: var(--red); padding: 2px 6px; font-size: 10px; color: white; margin-left: 4px; }
+        .btn-capture { background: var(--green); margin-top: 10px; width: 100%; padding: 8px; }
+        .icon-btn { background: none; color: var(--red); font-size: 14px; padding: 0; margin-right: 5px; }
+        .btn-sm { padding: 2px 5px; font-size: 10px; margin-left: 5px; background: #95a5a6; }
+
+        /* Right Panel Specifics */
+        .right-panel-section { margin-bottom: 15px; border-bottom: 1px dashed #ccc; padding-bottom: 10px; }
+        .guest-input-group { display: flex; gap: 3px; background: #fff0f0; padding: 5px; border: 1px dashed red; margin-bottom: 5px; align-items: center; }
+        .settings-table th { background: #7f8c8d; }
+        .settings-table td input { text-align: center; width: 100%; }
+
+        /* Modal */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100; }
+        .modal-content { background: white; width: 350px; margin: 50px auto; padding: 20px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .form-row { margin-bottom: 12px; }
+        .form-row label { display: block; font-weight: bold; margin-bottom: 4px; }
+        .form-row input, .form-row select { width: 100%; padding: 6px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+
+        /* Calendar */
+        .cal-ctrl { display: flex; justify-content: space-between; margin-bottom: 5px; background: #eee; padding: 3px; }
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; }
+        .cal-cell { padding: 6px; background: #f9f9f9; cursor: pointer; text-align: center; border: 1px solid #eee; }
+        .cal-cell:hover { background: #ddd; }
+
+        /* Tabs */
+        .tabs { margin-bottom: 5px; }
+        .tab-btn { background: #ddd; color: #333; margin-right: 5px; padding: 8px 15px; }
+        .tab-btn.active { background: var(--primary); color: white; }
+        .tab-content { display: none; height: 100%; }
+        .tab-content.active { display: block; }
+    </style>
+</head>
+<body>
+
+<div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('tab-tonghop')">Tổng Hợp</button>
+    <button class="tab-btn" onclick="switchTab('tab-chi')">Quản Lý Chi</button>
+</div>
+
+<div id="tab-tonghop" class="tab-content active">
+    <div class="grid">
+        <div class="col-left">
+            
+            <div class="box" style="flex: 0 0 42%;">
+                <div class="box-header">
+                    <h3>SỐ DƯ QUỸ (Năm <span class="year-display"></span>)</h3>
+                </div>
+                <div class="table-wrap">
+                    <table id="balanceTable">
+                        <thead>
+                            <tr>
+                                <th class="col-fit">Phân loại</th>
+                                <th>T1</th><th>T2</th><th>T3</th><th>T4</th><th>T5</th><th>T6</th>
+                                <th>T7</th><th>T8</th><th>T9</th><th>T10</th><th>T11</th><th>T12</th>
+                            </tr>
+                        </thead>
+                        <tbody id="balanceBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="box" style="flex: 1;">
+                <div class="box-header">
+                    <h3>TÌNH HÌNH ĐÓNG QUỸ</h3>
+                    <div>
+                        <button class="btn-add" onclick="openMemberModal()">+ Thêm</button>
+                        <select id="yearSelect" onchange="changeYear()" style="padding: 3px; margin-left: 5px; font-weight: bold;"></select>
+                    </div>
+                </div>
+                <div class="table-wrap">
+                    <table id="memberTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 30px;">STT</th>
+                                <th class="col-fit">Họ Tên</th>
+                                <th>Loại</th>
+                                <th>T1</th><th>T2</th><th>T3</th><th>T4</th><th>T5</th><th>T6</th>
+                                <th>T7</th><th>T8</th><th>T9</th><th>T10</th><th>T11</th><th>T12</th>
+                            </tr>
+                        </thead>
+                        <tbody id="memberBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-right" id="captureArea">
+            <h3 style="text-align: center; border-bottom: 2px solid var(--primary); padding-bottom: 10px; margin-bottom: 10px;">BẢNG THEO DÕI</h3>
+            
+            <div class="right-panel-section">
+                <h4>1. THEO DÕI NỢ & THU</h4>
+                <div class="guest-input-group">
+                    <input type="text" id="gName" placeholder="Tên khách..." style="width: 30%;">
+                    <input type="date" id="gDate" style="width: 35%; border: 1px solid #ccc; border-radius: 4px; padding: 3px;">
+                    <input type="text" id="gAmt" placeholder="Tiền thiếu..." onkeyup="formatCurrency(this)" style="width: 25%;">
+                    <button class="btn-add" style="width: 10%; padding: 0;" onclick="addGuestDebt()">+</button>
+                </div>
+
+                <table id="debtTable" style="margin-top: 5px;"></table>
+            </div>
+
+            <div class="right-panel-section" style="border: none;">
+                <h4>2. CẤU HÌNH SÂN BÃI</h4>
+                
+                <table class="settings-table" style="margin-bottom: 10px;">
+                    <thead>
+                        <tr>
+                            <th colspan="3">
+                                Bảng 1: Sân Đánh 
+                                <button class="btn-sm" onclick="addCourtRow()">+ Thêm sân</button>
+                            </th>
+                        </tr>
+                        <tr>
+                            <th>Tên Sân</th>
+                            <th>Giờ Đánh</th>
+                            <th style="width: 30px;">Xóa</th>
+                        </tr>
+                    </thead>
+                    <tbody id="courtSettingBody"></tbody>
+                </table>
+
+                <table class="settings-table">
+                    <thead>
+                        <tr><th colspan="2">Bảng 2: Phí Đánh (Quy định)</th></tr>
+                        <tr><th>Loại</th><th>Số Tiền (VNĐ)</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Cố Định</td>
+                            <td><input type="text" id="confFeeFixed" value="200,000" onkeyup="formatCurrency(this)" onchange="updateSettings()"></td>
+                        </tr>
+                        <tr>
+                            <td>Vãng Lai</td>
+                            <td><input type="text" id="confFeeGuest" value="50,000" onkeyup="formatCurrency(this)" onchange="updateSettings()"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <button class="btn-capture" onclick="capture()">📸 CHỤP MÀN HÌNH</button>
+        </div>
+    </div>
+</div>
+
+<div id="tab-chi" class="tab-content">
+    <div class="box" style="height: 90vh;">
+        <div class="box-header">
+            <h3>NHẬT KÝ CHI TIÊU</h3>
+            <button class="btn-add" onclick="openExpenseModal()">+ Thêm khoản chi</button>
+        </div>
+        <div class="table-wrap">
+            <table id="expenseTable">
+                <thead>
+                    <tr>
+                        <th>Ngày Chi</th>
+                        <th>Tháng (MM/YYYY)</th>
+                        <th>Nội dung</th>
+                        <th>Chi tiết</th>
+                        <th>Số tiền</th>
+                        <th>Hành động</th>
+                    </tr>
+                </thead>
+                <tbody id="expenseBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="memberModal" class="modal">
+    <div class="modal-content">
+        <span onclick="closeModal('memberModal')" style="float:right; cursor:pointer; font-size: 20px;">&times;</span>
+        <h3>Ghi Nhận Đóng Quỹ</h3>
+        <div class="form-row">
+            <label>Họ tên:</label> <input type="text" id="mName">
+        </div>
+        <div class="form-row">
+            <label>Loại:</label> 
+            <select id="mType"><option value="Cố Định">Cố Định</option><option value="Vãng Lai">Vãng Lai</option></select>
+        </div>
+        <div class="form-row">
+            <label>Số tiền:</label> <input type="text" id="mAmount" onkeyup="formatCurrency(this)">
+        </div>
+        <div class="form-row">
+            <label>Ngày đóng:</label>
+            <div style="border:1px solid #ddd; padding:5px;">
+                <div class="cal-ctrl">
+                    <button onclick="calNav(-1)">&lt;</button> <span id="calLabel"></span> <button onclick="calNav(1)">&gt;</button>
+                </div>
+                <div id="calGrid" class="cal-grid"></div>
+            </div>
+            <input type="hidden" id="mDate">
+            <div id="mDateDisplay" style="text-align:center; color:green; margin-top:5px;"></div>
+        </div>
+        <button class="btn-save" onclick="saveMember()">LƯU</button>
+    </div>
+</div>
+
+<div id="expenseModal" class="modal">
+    <div class="modal-content">
+        <span onclick="closeModal('expenseModal')" style="float:right; cursor:pointer; font-size: 20px;">&times;</span>
+        <h3>Thêm Khoản Chi</h3>
+        <div class="form-row"><label>Ngày:</label> <input type="date" id="exDate"></div>
+        <div class="form-row"><label>Loại:</label>
+            <select id="exType">
+                <option value="Thuê Sân">Thuê Sân</option><option value="Ống cầu">Ống cầu</option>
+                <option value="Nước">Nước</option><option value="Tổ chức giải">Tổ chức giải</option><option value="Khác">Khác</option>
+            </select>
+        </div>
+        <div class="form-row"><label>Chi tiết:</label> <input type="text" id="exDetail"></div>
+        <div class="form-row"><label>Tiền:</label> <input type="text" id="exAmount" onkeyup="formatCurrency(this)"></div>
+        <button class="btn-save" onclick="saveExpense()">LƯU</button>
+    </div>
+</div>
+
+<script>
+    // --- DATA & CONFIG ---
+    const START_YEAR = 2025;
+    let currentYear = new Date().getFullYear();
+    let viewYear = 2026; 
+
+    let settings = {
+        courts: [
+            { id: 1, name: "Sân 1", time: "18h - 20h" },
+            { id: 2, name: "Sân 2", time: "18h - 20h" }
+        ],
+        feeFixed: 200000,
+        feeGuest: 50000
+    };
+
+    // Data Structure: Key = Year, Value = List of Members
+    let data = {
+        membersByYear: {
+            2025: [
+                { id: 1, name: "Thành Viên A (Cũ)", type: "Cố Định", contributions: { '2025-12': 200000 } }
+            ],
+            2026: [
+                { id: 101, name: "Nguyễn Văn A", type: "Cố Định", contributions: { '2026-1': 200000, '2026-2': 100000 } }, 
+                { id: 102, name: "Trần Thị B", type: "Cố Định", contributions: { '2026-1': 200000 } }
+            ]
+        },
+        sponsors: { '2026-1-company': 1000000 },
+        expenses: [],
+        guestDebts: []
+    };
+
+    // --- INIT ---
+    function init() {
+        populateYearSelect();
+        initCalendar();
+        document.getElementById('gDate').valueAsDate = new Date();
+        document.getElementById('confFeeFixed').value = formatNum(settings.feeFixed);
+        document.getElementById('confFeeGuest').value = formatNum(settings.feeGuest);
+        
+        checkAndInitYearData(viewYear);
+        renderAll();
+    }
+
+    // --- CORE LOGIC: YEAR DATA MANAGEMENT ---
+    function checkAndInitYearData(year) {
+        // Nếu năm đó chưa có dữ liệu thành viên
+        if (!data.membersByYear[year]) {
+            data.membersByYear[year] = []; // Tạo list rỗng
+            
+            // Tìm năm gần nhất có dữ liệu để copy sang
+            let prevYear = year - 1;
+            while(prevYear >= START_YEAR) {
+                if (data.membersByYear[prevYear] && data.membersByYear[prevYear].length > 0) {
+                    // COPY danh sách (Clone)
+                    // Lưu ý: Chỉ copy Tên & Loại, reset đóng tiền
+                    data.membersByYear[year] = data.membersByYear[prevYear].map(m => ({
+                        id: Date.now() + Math.random(), // Tạo ID mới để độc lập với năm cũ
+                        name: m.name,
+                        type: m.type,
+                        contributions: {} 
+                    }));
+                    console.log(`Đã copy thành viên từ năm ${prevYear} sang ${year}`);
+                    break;
+                }
+                prevYear--;
+            }
+        }
+    }
+
+    function changeYear() {
+        viewYear = parseInt(document.getElementById('yearSelect').value);
+        checkAndInitYearData(viewYear); 
+        document.querySelectorAll('.year-display').forEach(e=>e.innerText=viewYear);
+        renderAll();
+    }
+
+    // --- RENDER FUNCTIONS ---
+    function renderAll() {
+        renderMembers();
+        renderBalanceTable();
+        renderExpenseTable();
+        renderCourtSettings();
+        renderDebtTable();
+    }
+
+    function renderMembers() {
+        const tb = document.getElementById('memberBody');
+        tb.innerHTML = '';
+        
+        // Lấy danh sách thành viên CỦA NĂM ĐANG XEM
+        let currentMembers = data.membersByYear[viewYear] || [];
+
+        currentMembers.forEach((mem, idx) => {
+            let tr = `<tr><td>${idx+1}</td><td class="col-fit"><button class="icon-btn" onclick="deleteMember(${mem.id})">🗑️</button>${mem.name}</td><td>${mem.type === 'Cố Định' ? 'CĐ' : 'VL'}</td>`;
+            for(let m=1; m<=12; m++) {
+                let val = mem.contributions[`${viewYear}-${m}`];
+                let display = (val !== undefined) ? formatNum(val) : '-';
+                let delBtn = (val !== undefined) ? `<span class="btn-del" onclick="delContrib(${mem.id}, ${m})">x</span>` : '';
+                tr += `<td>${display} ${delBtn}</td>`;
+            }
+            tb.innerHTML += tr + `</tr>`;
+        });
+    }
+
+    function getBalanceAtEndOf(year, month) {
+        let bal = 0;
+        for(let y=START_YEAR; y<=year; y++) {
+            let endM = (y===year) ? month : 12;
+            let mems = data.membersByYear[y] || []; 
+            
+            for(let m=1; m<=endM; m++) {
+                // Cộng tiền đóng của thành viên thuộc năm y
+                mems.forEach(mem => bal += (mem.contributions[`${y}-${m}`]||0));
+                
+                bal += (data.sponsors[`${y}-${m}-company`]||0) + (data.sponsors[`${y}-${m}-union`]||0);
+                data.expenses.forEach(e => { if(e.year===y && e.month===m) bal -= e.amount; });
+            }
+        }
+        return bal;
+    }
+
+    function renderBalanceTable() {
+        const tb = document.getElementById('balanceBody');
+        tb.innerHTML = '';
+        let rows = {
+            open: {n:"Số dư đầu kì", v:[]}, in_mem: {n:"- Thành viên", v:[]},
+            in_cp: {n:"- Cty tài trợ", v:[], e:'company'}, in_un: {n:"- CĐ tài trợ", v:[], e:'union'},
+            out: {n:"Chi", v:[]}, close: {n:"Số dư cuối kì", v:[]}
+        };
+        
+        let currentMembers = data.membersByYear[viewYear] || [];
+
+        for(let m=1; m<=12; m++) {
+            let prev = (m===1) ? getBalanceAtEndOf(viewYear-1, 12) : getBalanceAtEndOf(viewYear, m-1);
+            rows.open.v.push(prev);
+            
+            let sm=0; 
+            currentMembers.forEach(x => sm+=(x.contributions[`${viewYear}-${m}`]||0));
+            rows.in_mem.v.push(sm);
+            
+            rows.in_cp.v.push(data.sponsors[`${viewYear}-${m}-company`]||0);
+            rows.in_un.v.push(data.sponsors[`${viewYear}-${m}-union`]||0);
+            
+            let sout=0; data.expenses.forEach(e=>{if(e.year===viewYear && e.month===m) sout+=e.amount});
+            rows.out.v.push(sout);
+            
+            rows.close.v.push(prev + sm + rows.in_cp.v[m-1] + rows.in_un.v[m-1] - sout);
+        }
+        
+        const rowHTML = (o, bold=false) => {
+            let h = `<tr><td class="col-fit" style="font-weight:${bold?'bold':'normal'}">${o.n}</td>`;
+            o.v.forEach((v, i) => {
+                let cell = o.e ? `<input type="text" value="${formatNum(v)}" onkeyup="formatCurrency(this)" onchange="saveSponsor('${o.e}', ${i+1}, this.value)">` : `<span style="color:${v<0?'red':'inherit'}">${formatNum(v)}</span>`;
+                h += `<td class="money-cell">${cell}</td>`;
+            });
+            return h + '</tr>';
+        };
+        tb.innerHTML += rowHTML(rows.open) + rowHTML(rows.in_mem) + rowHTML(rows.in_cp) + rowHTML(rows.in_un) + rowHTML(rows.out) + rowHTML(rows.close, true);
+    }
+
+    function renderDebtTable() {
+        const table = document.getElementById('debtTable');
+        const today = new Date();
+        const currentM = today.getMonth() + 1;
+        let maxM = (viewYear < currentYear) ? 12 : (viewYear > currentYear ? 0 : currentM);
+        let debts = []; 
+        
+        let currentMembers = data.membersByYear[viewYear] || [];
+
+        currentMembers.forEach(mem => {
+            if(mem.type === 'Cố Định') {
+                let userDebts = [];
+                for(let m=1; m<=maxM; m++) {
+                    let paid = mem.contributions[`${viewYear}-${m}`] || 0;
+                    if (paid < settings.feeFixed) {
+                        userDebts.push({ display: `T${m}: ${formatNum(settings.feeFixed - paid)}`, isManual: false });
+                    }
+                }
+                if(userDebts.length > 0) debts.push({ name: mem.name, items: userDebts });
+            }
+        });
+
+        let guestMap = {};
+        data.guestDebts.forEach((g, idx) => {
+            if(g.year === viewYear) {
+                if(!guestMap[g.name]) guestMap[g.name] = [];
+                let dateDisplay = g.fullDate ? g.fullDate.split('-').reverse().join('/').substring(0,5) : `T${g.month}`;
+                guestMap[g.name].push({ display: `${dateDisplay}: ${formatNum(g.amount)}`, isManual: true, id: idx });
+            }
+        });
+        for(let k in guestMap) debts.push({ name: k + " (VL)", items: guestMap[k] });
+
+        let maxCols = 0;
+        debts.forEach(d => maxCols = Math.max(maxCols, d.items.length));
+        if(maxCols === 0) { table.innerHTML = '<tr><td colspan="2">Không có công nợ</td></tr>'; return; }
+
+        let thead = `<thead><tr><th class="col-fit">Họ Tên</th>`;
+        for(let i=0; i<maxCols; i++) thead += `<th>Khoản nợ ${i+1}</th>`;
+        thead += `</tr></thead>`;
+
+        let tbody = `<tbody>`;
+        debts.forEach(d => {
+            tbody += `<tr><td class="col-fit">${d.name}</td>`;
+            for(let i=0; i<maxCols; i++) {
+                if(d.items[i]) {
+                    let item = d.items[i];
+                    let delBtn = item.isManual ? `<span class="btn-del" onclick="delGuestDebt(${item.id})">x</span>` : '';
+                    tbody += `<td class="debt-cell">${item.display} ${delBtn}</td>`;
+                } else { tbody += `<td></td>`; }
+            }
+            tbody += `</tr>`;
+        });
+        tbody += `</tbody>`;
+        table.innerHTML = thead + tbody;
+    }
+
+    function renderExpenseTable() {
+        const tb = document.getElementById('expenseBody');
+        tb.innerHTML = '';
+        data.expenses.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach((e, idx) => {
+            let mStr = String(e.month).padStart(2,'0') + '/' + e.year;
+            tb.innerHTML += `<tr><td>${e.date.split('-').reverse().join('/')}</td><td>${mStr}</td><td>${e.type}</td><td>${e.detail}</td><td class="money-cell">${formatNum(e.amount)}</td><td><button class="btn-del" onclick="delExpense(${idx})">Xóa</button></td></tr>`;
+        });
+    }
+
+    // --- ACTIONS ---
+    function addCourtRow() { settings.courts.push({ id: Date.now(), name: "Sân Mới", time: "18h - 20h" }); renderCourtSettings(); }
+    function removeCourt(index) { if(confirm("Xóa dòng sân này?")) { settings.courts.splice(index, 1); renderCourtSettings(); } }
+    function updateCourt(index, field, val) { settings.courts[index][field] = val; }
+    function updateSettings() { settings.feeFixed = parseNum(document.getElementById('confFeeFixed').value); settings.feeGuest = parseNum(document.getElementById('confFeeGuest').value); renderDebtTable(); }
+    function renderCourtSettings() {
+        const tb = document.getElementById('courtSettingBody');
+        tb.innerHTML = '';
+        settings.courts.forEach((court, idx) => {
+            tb.innerHTML += `<tr>
+                <td><input type="text" value="${court.name}" onchange="updateCourt(${idx}, 'name', this.value)"></td>
+                <td><input type="text" value="${court.time}" onchange="updateCourt(${idx}, 'time', this.value)"></td>
+                <td><button class="btn-del" onclick="removeCourt(${idx})">x</button></td>
+            </tr>`;
+        });
+    }
+
+    function addGuestDebt() {
+        let name = document.getElementById('gName').value;
+        let dateVal = document.getElementById('gDate').value;
+        let rawAmt = document.getElementById('gAmt').value;
+        if(!name || rawAmt === '' || !dateVal) return alert("Vui lòng nhập Tên, Ngày và Tiền!");
+        let amt = parseNum(rawAmt);
+        let d = new Date(dateVal);
+        let m = d.getMonth() + 1;
+        let y = d.getFullYear();
+
+        data.guestDebts.push({ name: name, month: m, year: y, fullDate: dateVal, amount: amt });
+        document.getElementById('gName').value = '';
+        document.getElementById('gAmt').value = '';
+        if(y !== viewYear) { if(confirm(`Nợ ghi nhận cho năm ${y}. Chuyển sang xem năm ${y}?`)) { document.getElementById('yearSelect').value = y; changeYear(); return; } }
+        renderDebtTable();
+    }
+
+    function delGuestDebt(idx) { if(confirm("Xóa dòng nợ này?")) { data.guestDebts.splice(idx, 1); renderDebtTable(); } }
+    function openMemberModal() { document.getElementById('memberModal').style.display = 'block'; resetCal(); }
+    function openExpenseModal() { document.getElementById('expenseModal').style.display = 'block'; document.getElementById('exDate').valueAsDate = new Date(); }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    function saveMember() {
+        let name = document.getElementById('mName').value;
+        let type = document.getElementById('mType').value;
+        let rawAmt = document.getElementById('mAmount').value;
+        let date = document.getElementById('mDate').value;
+        if(!name || rawAmt === '' || !date) return alert("Thiếu thông tin");
+        
+        let amt = parseNum(rawAmt);
+        let d = new Date(date);
+        let y = d.getFullYear();
+        let m = d.getMonth()+1;
+        
+        // Đảm bảo năm đó đã được khởi tạo
+        checkAndInitYearData(y);
+
+        let mems = data.membersByYear[y];
+        let mem = mems.find(x=>x.name===name);
+        
+        if(!mem) { 
+            mem={id:Date.now(), name:name, type:type, contributions:{}}; 
+            mems.push(mem); 
+        }
+        mem.type = type;
+        let current = mem.contributions[`${y}-${m}`] || 0;
+        mem.contributions[`${y}-${m}`] = current + amt;
+        
+        closeModal('memberModal');
+        if(y!==viewYear) { if(confirm("Đã lưu vào năm "+y+". Xem năm đó?")) { document.getElementById('yearSelect').value=y; changeYear(); return; } }
+        renderAll();
+    }
+
+    function saveSponsor(type, m, v) { data.sponsors[`${viewYear}-${m}-${type}`] = parseNum(v); renderBalanceTable(); }
+
+    function saveExpense() {
+        let d = document.getElementById('exDate').value;
+        let rawAmt = document.getElementById('exAmount').value;
+        if(!d || rawAmt === '') return;
+        let amt = parseNum(rawAmt);
+        let dateObj = new Date(d);
+        data.expenses.push({ date: d, month: dateObj.getMonth()+1, year: dateObj.getFullYear(), type: document.getElementById('exType').value, detail: document.getElementById('exDetail').value, amount: amt });
+        closeModal('expenseModal'); renderAll();
+    }
+
+    function deleteMember(id) { 
+        if(confirm("Xóa thành viên khỏi năm "+viewYear+"? (Năm khác không ảnh hưởng)")) { 
+            data.membersByYear[viewYear] = data.membersByYear[viewYear].filter(x=>x.id!==id); 
+            renderAll(); 
+        } 
+    }
+    
+    function delContrib(id, m) { 
+        if(confirm("Xóa đóng quỹ tháng "+m+"?")) { 
+            let mem = data.membersByYear[viewYear].find(x=>x.id===id);
+            if(mem) delete mem.contributions[`${viewYear}-${m}`]; 
+            renderAll(); 
+        } 
+    }
+    
+    function delExpense(i) { if(confirm("Xóa chi tiêu này?")) { data.expenses.splice(i,1); renderAll(); } }
+
+    // --- UTILS ---
+    function populateYearSelect() { 
+        let s = document.getElementById('yearSelect'); s.innerHTML=''; 
+        // Thay đổi loop từ 2025 tới 2099
+        for(let y=2025; y<=2099; y++) { 
+            let o=document.createElement('option'); o.value=y; o.text=y; 
+            if(y===viewYear) o.selected=true; 
+            s.add(o); 
+        } 
+        document.querySelectorAll('.year-display').forEach(e=>e.innerText=viewYear); 
+    }
+    
+    function formatCurrency(e) { 
+        let v = e.value.replace(/\D/g,'');
+        if(v !== '') e.value = parseInt(v).toLocaleString('en-US');
+        else e.value = '';
+    }
+    function formatNum(n) { return n.toLocaleString('en-US'); }
+    function parseNum(s) { 
+        if(s === '' || s === undefined || s === null) return 0;
+        return parseInt(s.toString().replace(/,/g,''))||0; 
+    }
+    function switchTab(id) { document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active')); document.getElementById(id).classList.add('active'); event.currentTarget.classList.add('active'); }
+    function capture() { html2canvas(document.getElementById("captureArea")).then(c => { let l=document.createElement('a'); l.download='bao-cao.png'; l.href=c.toDataURL(); l.click(); }); }
+
+    // --- CALENDAR ---
+    let calState = {m:1, y:2026};
+    function initCalendar() { resetCal(); }
+    function resetCal() { let n=new Date(); calState={m:n.getMonth()+1, y:n.getFullYear()}; renderCal(); }
+    function renderCal() {
+        let g=document.getElementById('calGrid'); g.innerHTML='';
+        document.getElementById('calLabel').innerText = `${calState.m}/${calState.y}`;
+        let dim = new Date(calState.y, calState.m, 0).getDate();
+        let off = new Date(calState.y, calState.m-1, 1).getDay();
+        for(let i=0; i<off; i++) g.appendChild(document.createElement('div'));
+        for(let i=1; i<=dim; i++) {
+            let d=document.createElement('div'); d.className='cal-cell'; d.innerText=i;
+            d.onclick=()=>{ let s=`${calState.y}-${String(calState.m).padStart(2,'0')}-${String(i).padStart(2,'0')}`; document.getElementById('mDate').value=s; document.getElementById('mDateDisplay').innerText=s; };
+            g.appendChild(d);
+        }
+    }
+    function calNav(d) { calState.m+=d; if(calState.m>12){calState.m=1;calState.y++} if(calState.m<1){calState.m=12;calState.y--} renderCal(); }
+
+    init();
+</script>
+</body>
+</html>
