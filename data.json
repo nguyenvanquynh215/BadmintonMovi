@@ -1,0 +1,21 @@
+{
+  "data": {
+    "membersByYear": {
+      "2026": []
+    },
+    "sponsors": {},
+    "expenses": [],
+    "guestDebts": []
+  },
+  "settings": {
+    "courts": [
+      {
+        "id": 1,
+        "name": "Sân 1",
+        "time": "18h - 20h"
+      }
+    ],
+    "feeFixed": 200000,
+    "feeGuest": 50000
+  }
+}
