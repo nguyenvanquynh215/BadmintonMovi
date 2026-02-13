@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quản Lý Quỹ Cầu Lông (GitHub Cloud Sync)</title>
+    <title>Quản Lý Quỹ Cầu Lông (Auto Sync v10)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         :root { --primary: #2c3e50; --green: #27ae60; --red: #c0392b; --bg: #f4f6f7; --blue: #2980b9; }
@@ -49,18 +49,23 @@
         .tab-content { display: none; height: 100%; }
         .tab-content.active { display: block; }
         
-        /* Cloud Status */
+        /* Cloud Status & Loading */
         .cloud-status { margin-left: auto; font-size: 11px; display: flex; align-items: center; gap: 5px; }
         .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; display: inline-block; }
         .status-online { background: var(--green); }
         .status-offline { background: var(--red); }
         .btn-sync { background: var(--blue); color: white; margin-left: 10px; }
-        .loading-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(255,255,255,0.7); z-index: 200; justify-content: center; align-items: center; font-weight: bold; color: var(--primary); font-size: 18px; }
+        .loading-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(255,255,255,0.9); z-index: 999; flex-direction: column; justify-content: center; align-items: center; }
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--blue); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 15px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
-<div class="loading-overlay" id="loadingOverlay">Đang đồng bộ dữ liệu...</div>
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <div id="loadingText" style="font-weight: bold; color: #2c3e50;">Đang kết nối GitHub...</div>
+</div>
 
 <div class="tabs">
     <button class="tab-btn active" onclick="switchTab('tab-tonghop')">Tổng Hợp</button>
@@ -68,9 +73,9 @@
     
     <div class="cloud-status">
         <span id="statusDot" class="status-dot"></span>
-        <span id="statusText">Chưa kết nối Cloud</span>
+        <span id="statusText">Chưa kết nối</span>
         <button class="btn-sync" onclick="openCloudConfig()">☁️ Cấu hình GitHub</button>
-        <button class="btn-sync" style="background: var(--green);" onclick="manualSync()">🔄 Lưu & Đồng Bộ Ngay</button>
+        <button class="btn-sync" style="background: var(--green);" onclick="manualSync()">🔄 Lưu & Đồng Bộ</button>
     </div>
 </div>
 
@@ -78,82 +83,28 @@
     <div class="grid">
         <div class="col-left">
             <div class="box" style="flex: 0 0 42%;">
-                <div class="box-header">
-                    <h3>SỐ DƯ QUỸ (Năm <span class="year-display"></span>)</h3>
-                </div>
-                <div class="table-wrap">
-                    <table id="balanceTable">
-                        <thead>
-                            <tr>
-                                <th class="col-fit">Phân loại</th>
-                                <th>T1</th><th>T2</th><th>T3</th><th>T4</th><th>T5</th><th>T6</th>
-                                <th>T7</th><th>T8</th><th>T9</th><th>T10</th><th>T11</th><th>T12</th>
-                            </tr>
-                        </thead>
-                        <tbody id="balanceBody"></tbody>
-                    </table>
-                </div>
+                <div class="box-header"><h3>SỐ DƯ QUỸ (Năm <span class="year-display"></span>)</h3></div>
+                <div class="table-wrap"><table id="balanceTable"><thead><tr><th class="col-fit">Phân loại</th><th>T1</th><th>T2</th><th>T3</th><th>T4</th><th>T5</th><th>T6</th><th>T7</th><th>T8</th><th>T9</th><th>T10</th><th>T11</th><th>T12</th></tr></thead><tbody id="balanceBody"></tbody></table></div>
             </div>
-
             <div class="box" style="flex: 1;">
                 <div class="box-header">
                     <h3>TÌNH HÌNH ĐÓNG QUỸ</h3>
-                    <div>
-                        <button class="btn-add" onclick="openMemberModal()">+ Thêm</button>
-                        <select id="yearSelect" onchange="changeYear()" style="padding: 3px; margin-left: 5px; font-weight: bold;"></select>
-                    </div>
+                    <div><button class="btn-add" onclick="openMemberModal()">+ Thêm</button><select id="yearSelect" onchange="changeYear()" style="padding: 3px; margin-left: 5px; font-weight: bold;"></select></div>
                 </div>
-                <div class="table-wrap">
-                    <table id="memberTable">
-                        <thead>
-                            <tr>
-                                <th style="width: 30px;">STT</th>
-                                <th class="col-fit">Họ Tên</th>
-                                <th>Loại</th>
-                                <th>T1</th><th>T2</th><th>T3</th><th>T4</th><th>T5</th><th>T6</th>
-                                <th>T7</th><th>T8</th><th>T9</th><th>T10</th><th>T11</th><th>T12</th>
-                            </tr>
-                        </thead>
-                        <tbody id="memberBody"></tbody>
-                    </table>
-                </div>
+                <div class="table-wrap"><table id="memberTable"><thead><tr><th style="width: 30px;">STT</th><th class="col-fit">Họ Tên</th><th>Loại</th><th>T1</th><th>T2</th><th>T3</th><th>T4</th><th>T5</th><th>T6</th><th>T7</th><th>T8</th><th>T9</th><th>T10</th><th>T11</th><th>T12</th></tr></thead><tbody id="memberBody"></tbody></table></div>
             </div>
         </div>
-
         <div class="col-right" id="captureArea">
             <h3 style="text-align: center; border-bottom: 2px solid var(--primary); padding-bottom: 10px; margin-bottom: 10px;">BẢNG THEO DÕI</h3>
-            
             <div class="right-panel-section">
                 <h4>1. THEO DÕI NỢ & THU</h4>
-                <div class="guest-input-group">
-                    <input type="text" id="gName" placeholder="Tên khách..." style="width: 30%;">
-                    <input type="date" id="gDate" style="width: 35%; border: 1px solid #ccc; border-radius: 4px; padding: 3px;">
-                    <input type="text" id="gAmt" placeholder="Tiền thiếu..." onkeyup="formatCurrency(this)" style="width: 25%;">
-                    <button class="btn-add" style="width: 10%; padding: 0;" onclick="addGuestDebt()">+</button>
-                </div>
+                <div class="guest-input-group"><input type="text" id="gName" placeholder="Tên khách..." style="width: 30%;"><input type="date" id="gDate" style="width: 35%; border: 1px solid #ccc; border-radius: 4px; padding: 3px;"><input type="text" id="gAmt" placeholder="Tiền..." onkeyup="formatCurrency(this)" style="width: 25%;"><button class="btn-add" style="width: 10%; padding: 0;" onclick="addGuestDebt()">+</button></div>
                 <table id="debtTable" style="margin-top: 5px;"></table>
             </div>
-
             <div class="right-panel-section" style="border: none;">
                 <h4>2. CẤU HÌNH SÂN BÃI</h4>
-                <table class="settings-table" style="margin-bottom: 10px;">
-                    <thead>
-                        <tr><th colspan="3">Bảng 1: Sân Đánh <button class="btn-sm" onclick="addCourtRow()">+ Thêm sân</button></th></tr>
-                        <tr><th>Tên Sân</th><th>Giờ Đánh</th><th style="width: 30px;">Xóa</th></tr>
-                    </thead>
-                    <tbody id="courtSettingBody"></tbody>
-                </table>
-
-                <table class="settings-table">
-                    <thead>
-                        <tr><th colspan="2">Bảng 2: Phí Đánh (Quy định)</th></tr>
-                        <tr><th>Loại</th><th>Số Tiền (VNĐ)</th></tr>
-                    </thead>
-                    <tbody>
-                        <tr><td>Cố Định</td><td><input type="text" id="confFeeFixed" onkeyup="formatCurrency(this)" onchange="updateSettings()"></td></tr>
-                        <tr><td>Vãng Lai</td><td><input type="text" id="confFeeGuest" onkeyup="formatCurrency(this)" onchange="updateSettings()"></td></tr>
-                    </tbody>
-                </table>
+                <table class="settings-table" style="margin-bottom: 10px;"><thead><tr><th colspan="3">Bảng 1: Sân Đánh <button class="btn-sm" onclick="addCourtRow()">+ Thêm sân</button></th></tr><tr><th>Tên Sân</th><th>Giờ Đánh</th><th style="width: 30px;">Xóa</th></tr></thead><tbody id="courtSettingBody"></tbody></table>
+                <table class="settings-table"><thead><tr><th colspan="2">Bảng 2: Phí Đánh (Quy định)</th></tr><tr><th>Loại</th><th>Số Tiền (VNĐ)</th></tr></thead><tbody><tr><td>Cố Định</td><td><input type="text" id="confFeeFixed" onkeyup="formatCurrency(this)" onchange="updateSettings()"></td></tr><tr><td>Vãng Lai</td><td><input type="text" id="confFeeGuest" onkeyup="formatCurrency(this)" onchange="updateSettings()"></td></tr></tbody></table>
             </div>
             <button class="btn-capture" onclick="capture()">📸 CHỤP MÀN HÌNH</button>
         </div>
@@ -162,39 +113,22 @@
 
 <div id="tab-chi" class="tab-content">
     <div class="box" style="height: 90vh;">
-        <div class="box-header">
-            <h3>NHẬT KÝ CHI TIÊU</h3>
-            <button class="btn-add" onclick="openExpenseModal()">+ Thêm khoản chi</button>
-        </div>
-        <div class="table-wrap">
-            <table id="expenseTable">
-                <thead>
-                    <tr><th>Ngày Chi</th><th>Tháng (MM/YYYY)</th><th>Nội dung</th><th>Chi tiết</th><th>Số tiền</th><th>Hành động</th></tr>
-                </thead>
-                <tbody id="expenseBody"></tbody>
-            </table>
-        </div>
+        <div class="box-header"><h3>NHẬT KÝ CHI TIÊU</h3><button class="btn-add" onclick="openExpenseModal()">+ Thêm khoản chi</button></div>
+        <div class="table-wrap"><table id="expenseTable"><thead><tr><th>Ngày Chi</th><th>Tháng (MM/YYYY)</th><th>Nội dung</th><th>Chi tiết</th><th>Số tiền</th><th>Hành động</th></tr></thead><tbody id="expenseBody"></tbody></table></div>
     </div>
 </div>
 
 <div id="memberModal" class="modal">
-    <div class="modal-content">
-        <span onclick="closeModal('memberModal')" style="float:right; cursor:pointer; font-size: 20px;">&times;</span>
-        <h3>Ghi Nhận Đóng Quỹ</h3>
+    <div class="modal-content"><span onclick="closeModal('memberModal')" style="float:right; cursor:pointer; font-size: 20px;">&times;</span><h3>Ghi Nhận Đóng Quỹ</h3>
         <div class="form-row"><label>Họ tên:</label> <input type="text" id="mName"></div>
         <div class="form-row"><label>Loại:</label> <select id="mType"><option value="Cố Định">Cố Định</option><option value="Vãng Lai">Vãng Lai</option></select></div>
         <div class="form-row"><label>Số tiền:</label> <input type="text" id="mAmount" onkeyup="formatCurrency(this)"></div>
-        <div class="form-row"><label>Ngày đóng:</label>
-            <div style="border:1px solid #ddd; padding:5px;"><div class="cal-ctrl"><button onclick="calNav(-1)">&lt;</button> <span id="calLabel"></span> <button onclick="calNav(1)">&gt;</button></div><div id="calGrid" class="cal-grid"></div></div>
-            <input type="hidden" id="mDate"><div id="mDateDisplay" style="text-align:center; color:green; margin-top:5px;"></div>
-        </div>
+        <div class="form-row"><label>Ngày đóng:</label><div style="border:1px solid #ddd; padding:5px;"><div class="cal-ctrl"><button onclick="calNav(-1)">&lt;</button> <span id="calLabel"></span> <button onclick="calNav(1)">&gt;</button></div><div id="calGrid" class="cal-grid"></div></div><input type="hidden" id="mDate"><div id="mDateDisplay" style="text-align:center; color:green; margin-top:5px;"></div></div>
         <button class="btn-save" onclick="saveMember()">LƯU</button>
     </div>
 </div>
 <div id="expenseModal" class="modal">
-    <div class="modal-content">
-        <span onclick="closeModal('expenseModal')" style="float:right; cursor:pointer; font-size: 20px;">&times;</span>
-        <h3>Thêm Khoản Chi</h3>
+    <div class="modal-content"><span onclick="closeModal('expenseModal')" style="float:right; cursor:pointer; font-size: 20px;">&times;</span><h3>Thêm Khoản Chi</h3>
         <div class="form-row"><label>Ngày:</label> <input type="date" id="exDate"></div>
         <div class="form-row"><label>Loại:</label><select id="exType"><option value="Thuê Sân">Thuê Sân</option><option value="Ống cầu">Ống cầu</option><option value="Nước">Nước</option><option value="Tổ chức giải">Tổ chức giải</option><option value="Khác">Khác</option></select></div>
         <div class="form-row"><label>Chi tiết:</label> <input type="text" id="exDetail"></div>
@@ -202,26 +136,13 @@
         <button class="btn-save" onclick="saveExpense()">LƯU</button>
     </div>
 </div>
-
 <div id="cloudModal" class="modal">
-    <div class="modal-content">
-        <span onclick="closeModal('cloudModal')" style="float:right; cursor:pointer; font-size: 20px;">&times;</span>
-        <h3>Cấu Hình GitHub Cloud</h3>
-        <p style="font-size: 11px; color: #666;">Dữ liệu sẽ được lưu vào file <b>data.json</b> trong repo của bạn.</p>
-        <div class="form-row">
-            <label>GitHub Username:</label> 
-            <input type="text" id="ghUser" placeholder="VD: nguyenvanA">
-        </div>
-        <div class="form-row">
-            <label>Repository Name:</label> 
-            <input type="text" id="ghRepo" placeholder="VD: quan-ly-cau-long">
-        </div>
-        <div class="form-row">
-            <label>Personal Access Token (Classic):</label> 
-            <input type="password" id="ghToken" placeholder="ghp_xxxxxxxxxxxx">
-        </div>
-        <button class="btn-save" style="background: var(--blue);" onclick="saveCloudConfig()">LƯU KẾT NỐI</button>
-        <p style="margin-top:10px; font-size: 10px; color: red;">*Token chỉ được lưu trên trình duyệt này, không bị lộ ra ngoài.</p>
+    <div class="modal-content"><span onclick="closeModal('cloudModal')" style="float:right; cursor:pointer; font-size: 20px;">&times;</span><h3>Cấu Hình GitHub Cloud</h3>
+        <p style="font-size: 11px; color: #666;">Nhập thông tin 1 lần, trình duyệt sẽ tự nhớ.</p>
+        <div class="form-row"><label>GitHub Username:</label> <input type="text" id="ghUser"></div>
+        <div class="form-row"><label>Repository Name:</label> <input type="text" id="ghRepo"></div>
+        <div class="form-row"><label>Personal Access Token:</label> <input type="password" id="ghToken"></div>
+        <button class="btn-save" style="background: var(--blue);" onclick="saveCloudConfig()">LƯU & KẾT NỐI</button>
     </div>
 </div>
 
@@ -231,52 +152,36 @@
     let viewYear = 2026; 
 
     // DATA DEFAULT
-    const defaultSettings = {
-        courts: [{ id: 1, name: "Sân 1", time: "18h - 20h" }],
-        feeFixed: 200000,
-        feeGuest: 50000
-    };
-    const defaultData = {
-        membersByYear: { 2026: [] },
-        sponsors: {},
-        expenses: [],
-        guestDebts: []
-    };
+    const defaultSettings = { courts: [{ id: 1, name: "Sân 1", time: "18h - 20h" }], feeFixed: 200000, feeGuest: 50000 };
+    const defaultData = { membersByYear: { 2026: [] }, sponsors: {}, expenses: [], guestDebts: [] };
 
     let settings = JSON.parse(JSON.stringify(defaultSettings));
     let data = JSON.parse(JSON.stringify(defaultData));
     
     // GITHUB CONFIG
     let ghConfig = { user: '', repo: '', token: '' };
-    let fileSha = null; // Needed to update file on GitHub
+    let fileSha = null;
 
     // --- INIT ---
     function init() {
-        loadLocalConfig(); // Load GH Token info from LocalStorage
         populateYearSelect();
         initCalendar();
         document.getElementById('gDate').valueAsDate = new Date();
         
-        // Try to load from Cloud immediately if configured
-        if(ghConfig.token) {
-            fetchFromGitHub();
-        } else {
-            // Fallback to local data or default
-            renderAll();
-        }
-    }
-
-    // --- GITHUB SYNC LOGIC ---
-    function loadLocalConfig() {
+        // CHECK LOCAL CONFIG IMMEDIATELY
         const conf = localStorage.getItem("GH_CONFIG");
         if(conf) {
+            // Found config, try to fetch
             ghConfig = JSON.parse(conf);
             document.getElementById('ghUser').value = ghConfig.user;
             document.getElementById('ghRepo').value = ghConfig.repo;
             document.getElementById('ghToken').value = ghConfig.token;
-            updateStatusUI(true);
+            fetchFromGitHub();
         } else {
-            updateStatusUI(false);
+            // No config, show default
+            renderAll();
+            // Show config modal to prompt user
+            setTimeout(() => { openCloudConfig(); alert("Bạn chưa cấu hình GitHub! Hãy nhập Token để lưu dữ liệu online."); }, 1000);
         }
     }
 
@@ -285,48 +190,37 @@
         ghConfig.repo = document.getElementById('ghRepo').value.trim();
         ghConfig.token = document.getElementById('ghToken').value.trim();
         
-        if(!ghConfig.user || !ghConfig.repo || !ghConfig.token) {
-            alert("Vui lòng nhập đủ thông tin!");
-            return;
-        }
+        if(!ghConfig.user || !ghConfig.repo || !ghConfig.token) return alert("Vui lòng nhập đủ thông tin!");
         
         localStorage.setItem("GH_CONFIG", JSON.stringify(ghConfig));
         closeModal('cloudModal');
-        fetchFromGitHub(); // Pull data immediately
+        fetchFromGitHub();
     }
 
-    // Helper for UTF-8 Base64 (Important for Vietnamese)
+    // Helper for UTF-8 Base64
     function utf8_to_b64(str) { return window.btoa(unescape(encodeURIComponent(str))); }
     function b64_to_utf8(str) { return decodeURIComponent(escape(window.atob(str))); }
 
     async function fetchFromGitHub() {
-        showLoading(true);
+        showLoading(true, "Đang tải dữ liệu...");
         const url = `https://api.github.com/repos/${ghConfig.user}/${ghConfig.repo}/contents/data.json`;
         
         try {
-            const response = await fetch(url, {
-                headers: { 
-                    'Authorization': `token ${ghConfig.token}`,
-                    'Accept': 'application/vnd.github.v3+json'
-                }
-            });
+            const response = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}`, 'Accept': 'application/vnd.github.v3+json' } });
 
             if(response.status === 404) {
-                // File not found -> Create it with current data
                 console.log("File data.json chưa có, sẽ tạo mới khi lưu.");
                 fileSha = null;
-                updateStatusUI(true, "Đã kết nối (File mới)");
+                updateStatusUI(true, "Online (File mới)");
             } else if(response.ok) {
                 const json = await response.json();
-                fileSha = json.sha; // Save SHA for future updates
+                fileSha = json.sha;
                 const content = b64_to_utf8(json.content);
                 const parsed = JSON.parse(content);
                 
-                // Load data into app
                 data = parsed.data || defaultData;
                 settings = parsed.settings || defaultSettings;
                 
-                // Update UI inputs for settings
                 document.getElementById('confFeeFixed').value = formatNum(settings.feeFixed);
                 document.getElementById('confFeeGuest').value = formatNum(settings.feeGuest);
                 
@@ -334,92 +228,60 @@
                 renderAll();
                 updateStatusUI(true, "Đã đồng bộ");
             } else {
-                throw new Error("Lỗi kết nối: " + response.statusText);
+                updateStatusUI(false);
+                alert("Lỗi kết nối GitHub! Kiểm tra lại Token/Repo.");
             }
         } catch (error) {
             console.error(error);
-            alert("Không thể tải dữ liệu từ GitHub. Kiểm tra lại Cấu hình!");
             updateStatusUI(false);
         } finally {
             showLoading(false);
         }
     }
 
-    async function manualSync() {
-        await saveToGitHub();
-    }
+    async function manualSync() { await saveToGitHub(); }
 
     async function saveToGitHub() {
-        if(!ghConfig.token) {
-            alert("Chưa cấu hình GitHub! Dữ liệu chỉ lưu tạm trên RAM.");
-            return;
-        }
-
-        showLoading(true);
+        if(!ghConfig.token) return alert("Chưa cấu hình GitHub!");
+        showLoading(true, "Đang lưu lên Cloud...");
         const url = `https://api.github.com/repos/${ghConfig.user}/${ghConfig.repo}/contents/data.json`;
         const payload = {
-            message: "Update data from Web App",
+            message: "Update data via Web App",
             content: utf8_to_b64(JSON.stringify({ data: data, settings: settings }, null, 2)),
-            sha: fileSha // Required if updating existing file
+            sha: fileSha
         };
 
         try {
             const response = await fetch(url, {
                 method: 'PUT',
-                headers: { 
-                    'Authorization': `token ${ghConfig.token}`,
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Authorization': `token ${ghConfig.token}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
 
             if(response.ok) {
                 const json = await response.json();
-                fileSha = json.content.sha; // Update new SHA
-                console.log("Saved to GitHub successfully");
-                updateStatusUI(true, "Đã lưu lên Cloud");
+                fileSha = json.content.sha;
+                updateStatusUI(true, "Đã lưu thành công");
             } else {
                 const err = await response.json();
                 alert("Lỗi khi lưu: " + err.message);
             }
         } catch (error) {
-            console.error(error);
             alert("Lỗi mạng khi lưu dữ liệu!");
         } finally {
             showLoading(false);
         }
     }
 
-    function updateStatusUI(connected, msg) {
-        const dot = document.getElementById('statusDot');
-        const txt = document.getElementById('statusText');
-        if(connected) {
-            dot.className = "status-dot status-online";
-            txt.innerText = msg || "Online";
-            txt.style.color = "green";
-        } else {
-            dot.className = "status-dot status-offline";
-            txt.innerText = "Chưa kết nối";
-            txt.style.color = "red";
-        }
-    }
-    
-    function showLoading(show) {
-        document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
-    }
-
-    // --- LOGIC OLD --- (Copy from previous logic)
+    // --- LOGIC ---
     function checkAndInitYearData(year) {
         if (!data.membersByYear[year]) {
             data.membersByYear[year] = [];
             let prevYear = year - 1;
             while(prevYear >= START_YEAR) {
                 if (data.membersByYear[prevYear] && data.membersByYear[prevYear].length > 0) {
-                    data.membersByYear[year] = data.membersByYear[prevYear].map(m => ({
-                        id: Date.now() + Math.random(),
-                        name: m.name, type: m.type, contributions: {}
-                    }));
-                    // Don't auto-save here to avoid spamming API on view change, wait for user action
+                    data.membersByYear[year] = data.membersByYear[prevYear].map(m => ({ id: Date.now() + Math.random(), name: m.name, type: m.type, contributions: {} }));
+                    saveToGitHub(); // Auto save structure
                     break;
                 }
                 prevYear--;
@@ -427,17 +289,20 @@
         }
     }
 
+    // ACTIONS Wrapper
     function performAction(actionFn) {
         actionFn();
         renderAll();
-        // Auto-save debounce could be added here, but for now manual save or save on key actions
-        // Let's auto-save on major actions
-        saveToGitHub(); 
+        // Debounce auto-save or manual? Let's auto-save for better UX
+        // But to avoid API limit, maybe manual is safer? 
+        // For now, let's keep it manual save or save on explicit Save buttons.
+        // Uncomment below line for auto-save on every click (risk hitting API limits if spamming)
+        // saveToGitHub(); 
     }
 
-    // --- RENDER ---
     function renderAll() { renderMembers(); renderBalanceTable(); renderExpenseTable(); renderCourtSettings(); renderDebtTable(); }
 
+    // (Các hàm render cũ giữ nguyên)
     function renderMembers() {
         const tb = document.getElementById('memberBody'); tb.innerHTML = '';
         let currentMembers = data.membersByYear[viewYear] || [];
@@ -469,11 +334,7 @@
 
     function renderBalanceTable() {
         const tb = document.getElementById('balanceBody'); tb.innerHTML = '';
-        let rows = {
-            open: {n:"Số dư đầu kì", v:[]}, in_mem: {n:"- Thành viên", v:[]},
-            in_cp: {n:"- Cty tài trợ", v:[], e:'company'}, in_un: {n:"- CĐ tài trợ", v:[], e:'union'},
-            out: {n:"Chi", v:[]}, close: {n:"Số dư cuối kì", v:[]}
-        };
+        let rows = { open: {n:"Số dư đầu kì", v:[]}, in_mem: {n:"- Thành viên", v:[]}, in_cp: {n:"- Cty tài trợ", v:[], e:'company'}, in_un: {n:"- CĐ tài trợ", v:[], e:'union'}, out: {n:"Chi", v:[]}, close: {n:"Số dư cuối kì", v:[]} };
         let currentMembers = data.membersByYear[viewYear] || [];
         for(let m=1; m<=12; m++) {
             let prev = (m===1) ? getBalanceAtEndOf(viewYear-1, 12) : getBalanceAtEndOf(viewYear, m-1);
@@ -499,19 +360,15 @@
 
     function renderDebtTable() {
         const table = document.getElementById('debtTable');
-        const today = new Date();
-        const currentM = today.getMonth() + 1;
+        const today = new Date(); const currentM = today.getMonth() + 1;
         let maxM = (viewYear < currentYear) ? 12 : (viewYear > currentYear ? 0 : currentM);
-        let debts = []; 
-        let currentMembers = data.membersByYear[viewYear] || [];
+        let debts = []; let currentMembers = data.membersByYear[viewYear] || [];
         currentMembers.forEach(mem => {
             if(mem.type === 'Cố Định') {
                 let userDebts = [];
                 for(let m=1; m<=maxM; m++) {
                     let paid = mem.contributions[`${viewYear}-${m}`] || 0;
-                    if (paid < settings.feeFixed) {
-                        userDebts.push({ display: `T${m}: ${formatNum(settings.feeFixed - paid)}`, isManual: false });
-                    }
+                    if (paid < settings.feeFixed) userDebts.push({ display: `T${m}: ${formatNum(settings.feeFixed - paid)}`, isManual: false });
                 }
                 if(userDebts.length > 0) debts.push({ name: mem.name, items: userDebts });
             }
@@ -560,12 +417,12 @@
         });
     }
 
-    // ACTIONS WRAPPED WITH SAVE
+    // ACTIONS
     function changeYear() { viewYear = parseInt(document.getElementById('yearSelect').value); checkAndInitYearData(viewYear); document.querySelectorAll('.year-display').forEach(e=>e.innerText=viewYear); renderAll(); }
     function addCourtRow() { performAction(() => settings.courts.push({ id: Date.now(), name: "Sân Mới", time: "18h - 20h" })); }
     function removeCourt(index) { if(confirm("Xóa sân?")) performAction(() => settings.courts.splice(index, 1)); }
-    function updateCourt(idx, f, v) { settings.courts[idx][f] = v; saveToGitHub(); }
-    function updateSettings() { settings.feeFixed = parseNum(document.getElementById('confFeeFixed').value); settings.feeGuest = parseNum(document.getElementById('confFeeGuest').value); saveToGitHub(); renderDebtTable(); }
+    function updateCourt(idx, f, v) { settings.courts[idx][f] = v; } // Only local update, wait for manual save
+    function updateSettings() { settings.feeFixed = parseNum(document.getElementById('confFeeFixed').value); settings.feeGuest = parseNum(document.getElementById('confFeeGuest').value); renderDebtTable(); }
     function addGuestDebt() {
         let name = document.getElementById('gName').value, dateVal = document.getElementById('gDate').value, rawAmt = document.getElementById('gAmt').value;
         if(!name || rawAmt === '' || !dateVal) return alert("Thiếu thông tin!");
@@ -583,17 +440,19 @@
             mem.type = type; mem.contributions[`${y}-${m}`] = (mem.contributions[`${y}-${m}`]||0) + parseNum(rawAmt);
             closeModal('memberModal');
         });
+        saveToGitHub(); // Auto save for member actions
     }
-    function saveSponsor(type, m, v) { data.sponsors[`${viewYear}-${m}-${type}`] = parseNum(v); saveToGitHub(); renderBalanceTable(); }
+    function saveSponsor(type, m, v) { data.sponsors[`${viewYear}-${m}-${type}`] = parseNum(v); renderBalanceTable(); saveToGitHub(); }
     function saveExpense() {
         let d = document.getElementById('exDate').value, rawAmt = document.getElementById('exAmount').value;
         if(!d || rawAmt === '') return;
         let dojb = new Date(d);
         performAction(() => { data.expenses.push({ date: d, month: dojb.getMonth()+1, year: dojb.getFullYear(), type: document.getElementById('exType').value, detail: document.getElementById('exDetail').value, amount: parseNum(rawAmt) }); closeModal('expenseModal'); });
+        saveToGitHub();
     }
-    function deleteMember(id) { if(confirm("Xóa thành viên?")) performAction(() => data.membersByYear[viewYear] = data.membersByYear[viewYear].filter(x=>x.id!==id)); }
-    function delContrib(id, m) { if(confirm("Xóa đóng quỹ tháng "+m+"?")) performAction(() => { let mem=data.membersByYear[viewYear].find(x=>x.id===id); if(mem) delete mem.contributions[`${viewYear}-${m}`]; }); }
-    function delExpense(i) { if(confirm("Xóa khoản chi?")) performAction(() => data.expenses.splice(i,1)); }
+    function deleteMember(id) { if(confirm("Xóa thành viên?")) { performAction(() => data.membersByYear[viewYear] = data.membersByYear[viewYear].filter(x=>x.id!==id)); saveToGitHub(); } }
+    function delContrib(id, m) { if(confirm("Xóa đóng quỹ tháng "+m+"?")) { performAction(() => { let mem=data.membersByYear[viewYear].find(x=>x.id===id); if(mem) delete mem.contributions[`${viewYear}-${m}`]; }); saveToGitHub(); } }
+    function delExpense(i) { if(confirm("Xóa khoản chi?")) { performAction(() => data.expenses.splice(i,1)); saveToGitHub(); } }
 
     // UTILS
     function openMemberModal() { document.getElementById('memberModal').style.display = 'block'; resetCal(); }
@@ -606,7 +465,17 @@
     function parseNum(s) { if(s===''||s==null) return 0; return parseInt(s.toString().replace(/,/g,''))||0; }
     function switchTab(id) { document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active')); document.getElementById(id).classList.add('active'); event.currentTarget.classList.add('active'); }
     function capture() { html2canvas(document.getElementById("captureArea")).then(c => { let l=document.createElement('a'); l.download='bao-cao.png'; l.href=c.toDataURL(); l.click(); }); }
-    // Calendar
+    function updateStatusUI(connected, msg) {
+        const dot = document.getElementById('statusDot'); const txt = document.getElementById('statusText');
+        dot.className = connected ? "status-dot status-online" : "status-dot status-offline";
+        txt.innerText = msg || (connected ? "Online" : "Chưa kết nối");
+        txt.style.color = connected ? "green" : "red";
+    }
+    function showLoading(show, msg) {
+        document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
+        if(msg) document.getElementById('loadingText').innerText = msg;
+    }
+    // Calendar (Simple)
     let calState = {m:1, y:2026};
     function initCalendar() { resetCal(); }
     function resetCal() { let n=new Date(); calState={m:n.getMonth()+1, y:n.getFullYear()}; renderCal(); }
